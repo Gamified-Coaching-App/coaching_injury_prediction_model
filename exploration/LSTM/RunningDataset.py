@@ -1,20 +1,19 @@
 import pandas as pd
 import numpy as np
-from sklearn.preprocessing import MinMaxScaler, StandardScaler
-from sklearn.model_selection import train_test_split
 from imblearn.under_sampling import TomekLinks
 from imblearn.over_sampling import SMOTE
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.model_selection import train_test_split
 import tensorflow as tf
-import torch
-from imblearn.combine import SMOTETomek
-from pyts.image import GramianAngularField
-from scipy.spatial.distance import pdist, squareform
-from numpy.random import default_rng
 
 
-class Preprocessor:
+class RunningDataset:
+    """
+    Manages operations related to loading, processing, and splitting athlete performance data.
+    """
     def __init__(self):
-        self.filename = 'data/day_approach_maskedID_timeseries.csv'
+        """Initialize the dataset handling with predetermined parameters."""
+        self.filename = '../../data/day_approach_maskedID_timeseries.csv'
         self.WINDOW_DAYS = 7
         self.base_metrics = ['nr. sessions', 'total km', 'km Z3-4', 'km Z5-T1-T2', 'km sprinting', 
                              'strength training', 'hours alternative', 'perceived exertion', 
@@ -26,47 +25,77 @@ class Preprocessor:
         self.data_types_fixed_columns = [int] * len(self.identifiers)
         self.data = pd.read_csv(self.filename)
         self.data.columns = [f"{col}.0" if i < 10 else col for i, col in enumerate(self.data.columns)]
-        self.standard_scaler = StandardScaler()
-        self.min_max_scaler = MinMaxScaler()
-        print("Shape data before cleaning: ", self.data.shape)
-        #self.data = self.data_clear(self.data)
-        print("Shape data after cleaning: ", self.data.shape)
-        self.data = self.normalise(self.data, method='athlete-history', min=0)
-        self.split_data()
-    
-    def judge_sum(self, a, b, c, d, e, f, g):
-        return a + b + c + d + e + f + g
-
-    def data_clear(self, data):
-        columns_original = data.columns
-        data_original = data.values
-        judge = self.judge_sum(data_original[:, 0], data_original[:, 10], data_original[:, 20], data_original[:, 30], data_original[:, 40], data_original[:, 50], data_original[:, 60])
-
-        index = np.where(judge != 0)
-        data_new = data_original[index]
-        return pd.DataFrame(data_new, columns=columns_original)
-
-    def reorder_columns(self, data):
-        n = 70
-        new_order = []
-        for i in range(10):
-            new_order.extend([(i + 10 * j) % 70 for j in range(7)])
-        data = data.iloc[:, new_order]
-        return data
+        self.min_max_scaler = MinMaxScaler(feature_range=(0, 1))
     
     def split_data(self):
+        """
+        Splits the data into training and testing datasets based on the last 10 entries as test.
+        Returns:
+            train (DataFrame): Training dataset.
+            test (DataFrame): Testing dataset.
+        """
         athletes = pd.Series(self.data[self.identifiers[0]].unique())
         sorted_athletes = athletes.sort_values()
         test_ids = sorted_athletes[-10:].values
         train_ids = sorted_athletes[:-10].values
-        self.train = self.data[self.data[self.identifiers[0]].isin(train_ids)]
-        self.test = self.data[self.data[self.identifiers[0]].isin(test_ids)]
-        print("Training Data - Injury counts:", self.train['injury'].value_counts())
-        print("Testing Data - Injury counts:", self.test['injury'].value_counts())
-        self.train.reset_index(drop=True, inplace=True)
-        self.test.reset_index(drop=True, inplace=True)
+        train = self.data[self.data[self.identifiers[0]].isin(train_ids)]
+        test = self.data[self.data[self.identifiers[0]].isin(test_ids)]
+        print("Training Data - Injury counts:", train['injury'].value_counts())
+        print("Testing Data - Injury counts:", test['injury'].value_counts())
+        train.reset_index(drop=True, inplace=True)
+        test.reset_index(drop=True, inplace=True)
+        return train, test
+    
+    def getMeanStd(self, data):
+        """
+        Computes mean and standard deviation for normalization purposes, considering only non-injured cases.
+        """
+        mean = data[data['injury'] == 0].groupby(self.identifiers[0]).mean()
+        std = data[data['injury'] == 0].groupby(self.identifiers[0]).std()
+        std.replace(to_replace=0.0, value=0.01, inplace=True)  # Avoid division by zero
+        return mean, std
 
+    def normalize_athlete(self, row, metric, mean_df, std_df):
+        """
+        Applies z-score normalization for a given row using precomputed mean and standard deviation.
+        """
+        athlete_id = row[self.identifiers[0]]
+        if athlete_id in mean_df.index and athlete_id in std_df.index:
+            mu = mean_df.loc[athlete_id, metric]
+            su = std_df.loc[athlete_id, metric]
+            return (row[metric] - mu) / su
+        raise IndexError(f"Athlete ID {athlete_id} not found in mean and standard deviation dataframes.")
+
+    def z_score_normalization(self, df):
+        """
+        Applies z-score normalization grouped by athlete to each metric in the dataframe.
+        """
+        mean_df, std_df = self.getMeanStd(df)
+        for metric in self.base_metrics:
+            df[metric] = df.apply(lambda row: self.normalize_athlete(row, metric, mean_df, std_df), axis=1)
+        return df
+    
+    def min_max_normalization(self, df):
+        """
+        Applies Min-Max normalization to each metric in the dataframe.
+        """
+        for metric in self.base_metrics:
+            df[metric] = self.min_max_scaler.fit_transform(df[metric].values.reshape(-1, 1)).flatten()
+        return df.reset_index(drop=True)
+    
+    def normalise(self, dataset, days=14):
+        """
+        Normalizes the dataset using both z-score normalisation athlete by athlete and then and Min-Max normalisation column by column.
+        """
+        long = self.long_form(dataset)
+        long = self.z_score_normalization(long)
+        long = self.min_max_normalization(long)
+        return self.wide_form(long, days=days)
+    
     def long_form(self, df):
+        """
+        Converts the dataset to long format required for normalising.
+        """
         df_long = pd.wide_to_long(df, stubnames=self.base_metrics, i=self.fixed_columns, j='Offset', sep='.')
         df_long.reset_index(inplace=True)
         df_long[self.identifiers[1]] = df_long[self.identifiers[1]] - (self.WINDOW_DAYS - df_long['Offset'])
@@ -74,19 +103,10 @@ class Preprocessor:
         df_long.drop_duplicates(subset=self.identifiers, keep='first', inplace=True)
         return df_long
     
-    def z_score_normalization(self, df):
-        for metric in self.base_metrics:
-            df[metric] = df.groupby([self.identifiers[0]])[metric].transform(
-                lambda x: self.standard_scaler.fit_transform(x.values.reshape(-1, 1)).flatten()
-            )
-        return df.reset_index(drop=True)
-    
-    def min_max_normalization(self, df):
-        for metric in self.base_metrics:
-            df[metric] = self.min_max_scaler.fit_transform(df[metric].values.reshape(-1, 1)).flatten()
-        return df.reset_index(drop=True)
-    
     def wide_form(self, df_long, days):
+        """
+        Converts the dataset from long format to wide format after normalisation.
+        """
         df_long['Date'] = df_long['Date'].astype(int)
         df_long['Athlete ID'] = df_long['Athlete ID'].astype(int)
         df_long['injury'] = df_long['injury'].astype(int)
@@ -108,33 +128,16 @@ class Preprocessor:
         return df_rolled
     
     def fill_missing_dates(self, group):
+        """
+        Fills in missing dates for each athlete to ensure continuity in the data set.
+        Needed if the athlete has not recorded data for a specific date.
+        """
         min_date = group[self.identifiers[1]].min()
         max_date = group[self.identifiers[1]].max()
         int_range = range(min_date, max_date + 1)
         group = group.set_index(self.identifiers[1]).reindex(int_range).rename_axis(self.identifiers[1]).reset_index()
         group[self.identifiers[0]] = group[self.identifiers[0]].ffill()
         return group
-    
-    def normalise(self, dataset, method = 'sliding-window', min=0):
-        if method == 'sliding-window':
-            normalized_data = pd.DataFrame(index=dataset.index, columns=dataset.columns, data=0.0)
-            for index, row in dataset.iterrows():
-                for start in range(0, 70, 7):
-                    scaler = MinMaxScaler(feature_range=(min, 1))
-                    end = start + 7
-                    block = row[start:end]
-                    scaled_block = scaler.fit_transform(block.values.reshape(-1, 1)).flatten()
-                    normalized_data.iloc[index, start:end] = scaled_block
-            normalized_data.iloc[:, -3:] = dataset.iloc[:, -3:]
-            return normalized_data
-        
-        elif method == 'athlete-history':
-            long = self.long_form(dataset)
-            long = self.z_score_normalization(long)
-            long = self.min_max_normalization(long)
-            return self.wide_form(long, 7)
-        else:
-            raise ValueError("Invalid normalization method")
     
     def multi_resample(self, dataset):
         # Step 1: Balanced Sampling
@@ -203,7 +206,7 @@ class Preprocessor:
         print("Number of non-injuries (0) after Tomek Links:", (y_cleaned == 0).sum())
 
         # Then, use SMOTE to oversample the minority class based on the new class distribution
-        smote = SMOTE(sampling_strategy=sampling_rate, random_state=42, k_neighbors=600) 
+        smote = SMOTE(sampling_strategy=sampling_rate, random_state=42, k_neighbors=300) 
         X_res, y_res = smote.fit_resample(X_cleaned, y_cleaned)
 
         print("Number of samples after SMOTE: ", X_res.shape[0])
@@ -212,44 +215,45 @@ class Preprocessor:
 
         return pd.DataFrame(X_res, columns=X.columns), pd.Series(y_res)
 
-    def stack(self, df):
-        df = self.reorder_columns(df)
-        num_variables = 10  # Total number of different variables (features)
-        time_steps_per_variable = 7  # Number of time steps per variable
+
+    def stack(self, df, days):
+        """
+        Converts data from 2D shape (no_samples, no_variables * no_time_steps), i.e., (N, 140) to 
+        3D shape (no_samples, no_timesteps, no_variables), i.e., (N, 14, 10) as required by the LSTM model.
+        """
+        df.reset_index(drop=True, inplace=True)
+        num_variables = 10 
+        time_steps_per_variable = days
         num_samples = len(df)
-        # Initialize reshaped_data to accommodate the transposed shape (7, 10)
+    
         reshaped_data = np.zeros((num_samples, time_steps_per_variable, num_variables))
-        
         for index, row in df.iterrows():
-            temp_row = np.zeros((num_variables, time_steps_per_variable))
-            for var_index in range(num_variables):
-                start_col = var_index * time_steps_per_variable
-                end_col = start_col + time_steps_per_variable
-                temp_row[var_index, :] = row.iloc[start_col:end_col].values
-            
-            # Transpose temp_row to switch the order of variables and time steps
-            temp_row = temp_row.T
-            #temp_row = temp_row[::-1] # Reverse the order of time steps
-            reshaped_data[index, :, :] = temp_row  # Correctly assign the transposed temp_row
+            for time_step in range(time_steps_per_variable):
+                segment_start = time_step * num_variables
+                segment_end = segment_start + num_variables
+                reshaped_data[index, time_step, :] = row.iloc[segment_start:segment_end].values
+                
         return reshaped_data
 
-    def preprocess(self):
-        normalisation_method = 'athlete-history'
-        norm_min=0
-        #self.train = self.normalise(self.train, method=normalisation_method, min=norm_min)
-        #self.test = self.normalise(self.test, method=normalisation_method, min=norm_min)
+    def preprocess(self, days=7):
+        """
+        Normalises, splits, resamples and stacks data for training and testing.
+        """
+        self.data = self.normalise(self.data, days=days)
+        self.train, self.test = train_test_split(self.data)
         self.X_train, self.y_train = self.multi_resample(self.train)
-        self.X_restructure_train = self.stack(self.X_train)
-        self.X_restructure_test = self.stack(self.test.drop(columns=self.fixed_columns))
+
+        self.X_train = self.stack(self.X_train, days)
+        self.X_test = self.stack(self.test.drop(columns=self.fixed_columns), days)
         self.y_test = self.test[self.class_name]
 
-        X_gasf_train = tf.convert_to_tensor(self.X_restructure_train, dtype=tf.float32)
-        X_gasf_test = tf.convert_to_tensor(self.X_restructure_test, dtype=tf.float32)
-        y_train = tf.convert_to_tensor(self.y_train.values, dtype=tf.float32)
-        y_test = tf.convert_to_tensor(self.y_test.values, dtype=tf.float32)
+        X_train = tf.convert_to_tensor(self.X_train, dtype=tf.float32)
+        y_train = tf.convert_to_tensor(self.y_train, dtype=tf.float32)
+        X_test = tf.convert_to_tensor(self.X_test, dtype=tf.float32)
+        y_test = tf.convert_to_tensor(self.y_test, dtype=tf.float32)
 
-        print("Shapes of the datasets: X_train:", X_gasf_train.shape, 
+        print("Shapes of the datasets: X_train:", X_train.shape, 
               "y_train:", y_train.shape, 
-              "X_test:", X_gasf_test.shape, 
+              "X_test:", X_test.shape, 
               "y_test:", y_test.shape)
-        return X_gasf_train, y_train, X_gasf_test, y_test
+        return X_train, y_train, X_test, y_test
