@@ -1,0 +1,11 @@
+# Ignore virtual environment
+venv_coaching_02/
+
+#ignore data
+data/
+
+#ignore pycache
+__pycache__/
+.pytest_cache/
+
+.vscode/
