@@ -1,10 +1,10 @@
-from RunningDataset import RunningDataset
-from autoencoder import run_and_encode
-from classifier import run_and_evaluate
+from exploration.Image_Encoding.RunningDataset import RunningDataset
+from exploration.LSTM.Image_Encoding.autoencoder import run_and_encode
+from exploration.Image_Encoding.classifier import run_and_evaluate
 import torch
 from torch.utils.data import DataLoader, TensorDataset
-from preprocessor import Preprocessor
-from classifier_lstm import run_and_evaluate
+from exploration.LSTM.preprocessor import Preprocessor
+from exploration.LSTM.classifier_lstm import run_and_evaluate
 #from classifier import run_and_evaluate
 
 
