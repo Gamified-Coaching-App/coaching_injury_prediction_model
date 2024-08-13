@@ -1,24 +1,27 @@
 from model.model import Model
 from config import model_configs
-import tensorflow as tf
 import h5py
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
+import tensorflow as tf
 
-def configure_gpu():
-    gpus = tf.config.experimental.list_physical_devices('GPU')
-    if gpus:
-        try:
-            for gpu in gpus:
-                tf.config.experimental.set_memory_growth(gpu, True)
-            print(f"GPUs Available: {gpus}")
-        except RuntimeError as e:
-            print(e)
-    else: 
-        print("No GPUs available.")
+def configure_gpu(device_to_use):
+    if device_to_use == 'CPU':
+        tf.config.set_visible_devices([], 'GPU')
+    else:
+        gpus = tf.config.experimental.list_physical_devices('GPU')
+        if gpus:
+            try:
+                for gpu in gpus:
+                    tf.config.experimental.set_memory_growth(gpu, True)
+                print(f"GPUs Available: {gpus}")
+            except RuntimeError as e:
+                print(e)
+        else: 
+            print("No GPUs available.")
 
 def train_model():
-    configure_gpu()
+    configure_gpu(device_to_use='CPU')
     
     # Load data
     with h5py.File('./data/dataset.h5', 'r') as hf:
@@ -39,8 +42,8 @@ def train_model():
     y_test = tf.convert_to_tensor(y_test, dtype=tf.float32)
     
     # Parameters
-    batch_size = 50
-    epochs = 1000
+    batch_size = 50 #batch size 50 most successful so far
+    epochs = 1500
     
     for model_config in model_configs:
         model = Model(model_config)
@@ -53,7 +56,7 @@ def train_model():
         print(f"Model: {model_config['layers']}, Test Loss: {test_loss:.4f}")
 
         # Save the model
-        model.model.export('../../surrogate_model/final')
+        #model.model.export('../../surrogate_model/final')
 
 # Execute the function
 if __name__ == '__main__':
