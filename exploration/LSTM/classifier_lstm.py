@@ -1,7 +1,7 @@
 import tensorflow as tf
 from tensorflow.keras import layers, models, optimizers, losses, initializers, Sequential
 from tensorflow.keras.callbacks import ReduceLROnPlateau
-from keras.layers import LSTM, Bidirectional, BatchNormalization, Dropout
+from keras.layers import LSTM, Bidirectional, BatchNormalization, Dropout, AlphaDropout
 from sklearn.metrics import roc_auc_score
 import numpy as np
 from tensorflow.keras.models import load_model
@@ -11,32 +11,30 @@ class Classifier(models.Model):
     def __init__(self):
         super(Classifier, self).__init__()
         self.model = Sequential([
-            Bidirectional(LSTM(200,  dropout = 0.1, recurrent_dropout = 0.1, return_sequences=True), input_shape=(7,10)), 
-            # BatchNormalization(),
-            # Dropout(0.1),
-            # Bidirectional(LSTM(80, dropout = 0.1, recurrent_dropout = 0.1, return_sequences=True)),
-            # # BatchNormalization(),
-            # # Dropout(0.1),
-            # Bidirectional(LSTM(80, dropout = 0.1, recurrent_dropout = 0.1, return_sequences=True)),
-            # # BatchNormalization(),
-            # # Dropout(0.1),
-            Bidirectional(LSTM(200,  dropout = 0.1, recurrent_dropout = 0.1, return_sequences=False)),
-            # BatchNormalization(),
-            # Dropout(0.1),
+            layers.Input(shape=(7, 10)),
+            layers.Bidirectional(LSTM(20, return_sequences=True)),
+            Dropout(0.1),
+            layers.Bidirectional(LSTM(20, return_sequences=False)),
             layers.Dense(units=50, activation='selu'), 
             BatchNormalization(),
-            Dropout(0.1),
-            layers.Dense(units=10, activation='selu'), 
+            AlphaDropout(0.1),
+            layers.Dense(units=50, activation='selu'), 
             BatchNormalization(),
-            Dropout(0.1),
+            AlphaDropout(0.1),
+            layers.Dense(units=50, activation='selu'), 
+            BatchNormalization(),
+            AlphaDropout(0.1),
+            # layers.Dense(units=10, activation='selu'), 
+            # BatchNormalization(),
+            # Dropout(0.1),
             layers.Dense(units=1, activation='sigmoid')
         ])
 
     def call(self, x):
         return self.model(x)
     
-def train_model(model, training_set, epochs=200, learning_rate=0.01, batch_size=512):
-    model.compile(optimizer=optimizers.Adam(learning_rate=learning_rate,beta_1=0.5, beta_2=0.99, epsilon=1e-07, amsgrad=True),
+def train_model(model, training_set, epochs=1000, learning_rate=0.1, batch_size=512):
+    model.compile(optimizer=optimizers.Adam(learning_rate=learning_rate, beta_1=0.8, beta_2=0.9999, epsilon=1e-07),
                  loss=losses.BinaryFocalCrossentropy(alpha=0.55, gamma=5.0), metrics=['accuracy'])
     #best: beta_1=0.5, beta_2=0.99999, epsilon=1e-07, amsgrad=True
     
@@ -57,4 +55,4 @@ def run_and_evaluate(X_train, y_train, X_test, y_test):
     train_loss, auc_score_train= evaluate_model(classifier, X_train, y_train)
     print(f"Test Loss: {test_loss}, Test AUC: {auc_score_test}")
     print(f"Train Loss: {train_loss}, Train AUC: {auc_score_train}")
-    classifier.model.export('../coaching_optimiser/final/injury')
+    classifier.model.export('model/injury_prediction')

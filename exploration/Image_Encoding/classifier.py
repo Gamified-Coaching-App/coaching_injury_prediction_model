@@ -1,7 +1,6 @@
 import tensorflow as tf
 from tensorflow.keras import layers, models, optimizers, losses, initializers
 from sklearn.metrics import roc_auc_score
-from exploration.Image_Encoding.RunningDataset import RunningDataset
 import numpy as np
 
 class Classifier(models.Model):
@@ -10,19 +9,19 @@ class Classifier(models.Model):
         self.fc_layers = [
             layers.Dense(units=50, activation='selu'),
             layers.BatchNormalization(),
-            layers.AlphaDropout(0.5),
-
-            # layers.Dense(units=50, activation='selu'),
-            # layers.BatchNormalization(),
-            # layers.AlphaDropout(0.5),
-
-            # layers.Dense(units=50, activation='selu'),
-            # layers.BatchNormalization(),
-            # layers.AlphaDropout(0.5),
+            layers.AlphaDropout(0.3),
 
             layers.Dense(units=50, activation='selu'),
             layers.BatchNormalization(),
-            layers.AlphaDropout(0.5),
+            layers.AlphaDropout(0.3),
+
+            layers.Dense(units=50, activation='selu'),
+            layers.BatchNormalization(),
+            layers.AlphaDropout(0.3),
+
+            layers.Dense(units=50, activation='selu'),
+            layers.BatchNormalization(),
+            layers.AlphaDropout(0.3),
         ]
         self.output_layer = layers.Dense(units=1, activation='sigmoid')
 

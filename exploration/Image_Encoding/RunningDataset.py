@@ -14,7 +14,7 @@ from numpy.random import default_rng
 
 class RunningDataset:
     def __init__(self):
-        self.filename = 'data/day_approach_maskedID_timeseries.csv'
+        self.filename = '../../data/day_approach_maskedID_timeseries.csv'
         self.WINDOW_DAYS = 7
         self.base_metrics = ['nr. sessions', 'total km', 'km Z3-4', 'km Z5-T1-T2', 'km sprinting', 
                              'strength training', 'hours alternative', 'perceived exertion', 
@@ -140,7 +140,7 @@ class RunningDataset:
     
     def multi_resample(self, dataset):
         # Step 1: Balanced Sampling
-        dataset = self.balanced_sampling(dataset)
+        dataset = self.getBalancedSubset(dataset, 2048)
         # Step 2: Unbalanced Sampling
         dataset = self.unbalanced_sampling(dataset, 650, 0.136)
         # Step 3: Synthetic Sampling
@@ -152,19 +152,13 @@ class RunningDataset:
         groups = data.groupby('Athlete ID')
         balanced_data = []
 
-        all_injured = data[data[self.class_name] == 1]
-
         for _, group in groups:
             injured = group[group[self.class_name] == 1]
             uninjured = group[group[self.class_name] == 0]
 
             n_samples = len(uninjured)
-            if injured.empty:
-                injured_samples = all_injured.sample(n_samples, replace=True, random_state = 42)
-                #continue
-            else:
-                injured_samples = injured.sample(n_samples, replace=True, random_state = 42)
-            uninjured_samples = uninjured.sample(n_samples, replace=False, random_state = 42)  
+            injured_samples = injured.sample(n_samples, replace=True, random_state = 42)
+            uninjured_samples = uninjured.sample(n_samples, replace=True, random_state = 42)  
             balanced_data.append(injured_samples)
             balanced_data.append(uninjured_samples)
 
@@ -295,12 +289,11 @@ class RunningDataset:
         return X_subset, y_subset
 
     def preprocess(self):
-        normalisation_method = 'sliding-window'
+        normalisation_method = 'athlete-history'
         norm_min=0
         self.train = self.normalise(self.train, method=normalisation_method, min=norm_min)
         self.test = self.normalise(self.test, method=normalisation_method, min=norm_min)
         self.validate = self.train
-        self.train = self.getBalancedSubset(self.train, 2048)
         self.X_train, self.y_train = self.multi_resample(self.train)
         self.X_train = self.image_encoding(self.X_train, normalisation_method, min=norm_min)
         self.X_validate = self.image_encoding(self.validate.drop(columns=self.fixed_columns), normalisation_method, min=norm_min)
@@ -323,12 +316,3 @@ class RunningDataset:
               "X_validate:", X_validate.shape,
               "y_validate:", y_validate.shape)
         return X_train, y_train, X_validate, y_validate, X_test, y_test
-    
-    def preprocess_xgb(self):
-        print("Shape training before cleaning: ", self.train.shape)
-        self.train = self.data_clear(self.train)
-        print("Shape training after cleaning: ", self.train.shape)
-        self.train = self.normalise(self.train)
-        self.test = self.normalise(self.test)
-        self.X_train, self.y_train = self.multi_resample(self.train)
-        return self.X_train, self.y_train, self.test.drop(columns=self.fixed_columns), self.test[self.class_name]
