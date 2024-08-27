@@ -1,6 +1,5 @@
 data/
 
-#ignore pycache
 __pycache__/
 .pytest_cache/
 
