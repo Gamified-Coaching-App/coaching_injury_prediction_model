@@ -1,0 +1,62 @@
+{
+  "architecture=[{'type': 'lstm', 'units': 32, 'return_sequences': True}, {'type': 'batch_normalization'}, {'type': 'lstm', 'units': 16, 'return_sequences': True}, {'type': 'batch_normalization'}, {'type': 'lstm', 'units': 8, 'return_sequences': False}, {'type': 'batch_normalization'}, {'type': 'dense', 'units': 8}, {'type': 'batch_normalization'}, {'type': 'dense', 'units': 8}, {'type': 'batch_normalization'}, {'type': 'dense', 'units': 1, 'activation': 'sigmoid'}], optimiser_params={'optimiser': 'adam', 'learning_rate': 0.001, 'weight_decay': 0.0, 'scheduler': 'None', 'scheduler_params': 'None', 'batch_size': 64}": {
+    "val_losses": [
+      0.006628564093261957,
+      0.007679312489926815,
+      0.0059071932919323444,
+      0.006154446396976709,
+      0.0070171537809073925
+    ],
+    "mean_val_loss": 0.006677,
+    "stdv_val_loss": 0.000631,
+    "num_epochs": 146
+  },
+  "architecture=[{'type': 'lstm', 'units': 16, 'return_sequences': True}, {'type': 'batch_normalization'}, {'type': 'lstm', 'units': 8, 'return_sequences': True}, {'type': 'batch_normalization'}, {'type': 'lstm', 'units': 4, 'return_sequences': False}, {'type': 'batch_normalization'}, {'type': 'dense', 'units': 4}, {'type': 'batch_normalization'}, {'type': 'dense', 'units': 4}, {'type': 'batch_normalization'}, {'type': 'dense', 'units': 1, 'activation': 'sigmoid'}], optimiser_params={'optimiser': 'adam', 'learning_rate': 0.001, 'weight_decay': 0.0, 'scheduler': 'None', 'scheduler_params': 'None', 'batch_size': 64}": {
+    "val_losses": [
+      0.006716728210449219,
+      0.007302034180611372,
+      0.006829984951764345,
+      0.006635017693042755,
+      0.007589845452457666
+    ],
+    "mean_val_loss": 0.007015,
+    "stdv_val_loss": 0.000369,
+    "num_epochs": 119
+  },
+  "architecture=[{'type': 'transformer_encoder', 'num_heads': 4, 'intermediate_dim': 16, 'dropout': 0.1, 'activation': 'relu'}, {'type': 'transformer_encoder', 'num_heads': 4, 'intermediate_dim': 16, 'dropout': 0.1, 'activation': 'relu'}, {'type': 'transformer_decoder', 'num_heads': 4, 'intermediate_dim': 16, 'dropout': 0.1, 'activation': 'relu'}, {'type': 'transformer_decoder', 'num_heads': 4, 'intermediate_dim': 16, 'dropout': 0.1, 'activation': 'relu'}, {'type': 'flatten'}, {'type': 'dense', 'units': 40}, {'type': 'dense', 'units': 1, 'activation': 'sigmoid'}], optimiser_params={'optimiser': 'adam', 'learning_rate': 0.001, 'weight_decay': 0.0, 'scheduler': 'None', 'scheduler_params': 'None', 'batch_size': 64}": {
+    "val_losses": [
+      0.006077145226299763,
+      0.005500059109181166,
+      0.005579772405326366,
+      0.0062090191058814526,
+      0.006113980431109667
+    ],
+    "mean_val_loss": 0.005896,
+    "stdv_val_loss": 0.000295,
+    "num_epochs": 200
+  },
+  "architecture=[{'type': 'transformer_encoder', 'num_heads': 8, 'intermediate_dim': 16, 'dropout': 0.1, 'activation': 'relu'}, {'type': 'transformer_encoder', 'num_heads': 8, 'intermediate_dim': 16, 'dropout': 0.1, 'activation': 'relu'}, {'type': 'transformer_decoder', 'num_heads': 8, 'intermediate_dim': 16, 'dropout': 0.1, 'activation': 'relu'}, {'type': 'transformer_decoder', 'num_heads': 8, 'intermediate_dim': 16, 'dropout': 0.1, 'activation': 'relu'}, {'type': 'flatten'}, {'type': 'dense', 'units': 40}, {'type': 'dense', 'units': 1, 'activation': 'sigmoid'}], optimiser_params={'optimiser': 'adam', 'learning_rate': 0.001, 'weight_decay': 0.0, 'scheduler': 'None', 'scheduler_params': 'None', 'batch_size': 64}": {
+    "val_losses": [
+      0.005799183622002602,
+      0.005407439079135656,
+      0.005511381663382053,
+      0.005834419280290604,
+      0.005173641722649336
+    ],
+    "mean_val_loss": 0.005545,
+    "stdv_val_loss": 0.000248,
+    "num_epochs": 200
+  }, 
+  "architecture=[{'type': 'lstm', 'units': 64, 'return_sequences': True}, {'type': 'batch_normalization'}, {'type': 'lstm', 'units': 32, 'return_sequences': True}, {'type': 'batch_normalization'}, {'type': 'lstm', 'units': 16, 'return_sequences': False}, {'type': 'batch_normalization'}, {'type': 'dense', 'units': 16}, {'type': 'batch_normalization'}, {'type': 'dense', 'units': 16}, {'type': 'batch_normalization'}, {'type': 'dense', 'units': 1, 'activation': 'sigmoid'}], optimiser_params={'optimiser': 'adam', 'learning_rate': 0.001, 'weight_decay': 0.0, 'scheduler': 'None', 'scheduler_params': 'None', 'batch_size': 64}": {
+   "val_losses": [
+   0.006015849765390158,
+    0.00668334262445569,
+    0.005920107942074537,
+    0.005874444730579853,
+    0.0060180011205375195
+    ],
+    "mean_val_loss": 0.006102,
+    "stdv_val_loss": 0.000296,
+    "num_epochs": 200
+   }
+}
