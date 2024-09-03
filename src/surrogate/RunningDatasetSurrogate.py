@@ -13,12 +13,14 @@ import os
 import pickle
 from sklearn.metrics import roc_auc_score
 
-class RunningDatasetSurrogate:
+"""
+RunningDatasetSurrogate class manages operations related to loading and processing of data
+"""
+class RunningDatasetSurrogate:    
     """
-    Manages operations related to loading, processing, and splitting athlete performance data.
+    __init__ method initialises the dataset intance with predetermined parameters
     """
     def __init__(self):
-        """Initialize the dataset handling with predetermined parameters."""
         self.filename = '../../data/day_approach_maskedID_timeseries.csv'
         self.WINDOW_DAYS = 7
         self.base_metrics = ['nr. sessions', 'total km', 'km Z3-4', 'km Z5-T1-T2', 'km sprinting', 
@@ -32,39 +34,20 @@ class RunningDatasetSurrogate:
         self.data = pd.read_csv(self.filename)
         self.data.columns = [f"{col}.0" if i < 10 else col for i, col in enumerate(self.data.columns)]
         self.min_max_scaler = MinMaxScaler(feature_range=(0, 1))
-    
-    def split_data(self):
-        """
-        Splits the data into training and testing datasets based on the last 10 entries as test.
-        Returns:
-            train (DataFrame): Training dataset.
-            test (DataFrame): Testing dataset.
-        """
-        athletes = pd.Series(self.data[self.identifiers[0]].unique())
-        sorted_athletes = athletes.sort_values()
-        test_ids = sorted_athletes[-10:].values
-        train_ids = sorted_athletes[:-10].values
-        train = self.data[self.data[self.identifiers[0]].isin(train_ids)]
-        test = self.data[self.data[self.identifiers[0]].isin(test_ids)]
-        print("Training Data - Injury counts:", train['injury'].value_counts())
-        print("Testing Data - Injury counts:", test['injury'].value_counts())
-        train.reset_index(drop=True, inplace=True)
-        test.reset_index(drop=True, inplace=True)
-        return train, test
-    
+    """
+    function computes mean and standard deviation for normalization purposes, considering only non-injured cases.
+    """
     def getMeanStd(self, data):
-        """
-        Computes mean and standard deviation for normalization purposes, considering only non-injured cases.
-        """
         mean = data[data['injury'] == 0].groupby(self.identifiers[0]).mean()
         std = data[data['injury'] == 0].groupby(self.identifiers[0]).std()
-        std.replace(to_replace=0.0, value=0.01, inplace=True)  # Avoid division by zero
+        std.replace(to_replace=0.0, value=0.01, inplace=True)  
         return mean, std
-
+    
+    """
+    function applies z-score normalisation for a given row using precomputed mean and standard deviation
+    """
     def normalize_athlete(self, row, metric, mean_df, std_df):
-        """
-        Applies z-score normalization for a given row using precomputed mean and standard deviation.
-        """
+        
         athlete_id = row[self.identifiers[0]]
         if athlete_id in mean_df.index and athlete_id in std_df.index:
             mu = mean_df.loc[athlete_id, metric]
@@ -72,36 +55,36 @@ class RunningDatasetSurrogate:
             return (row[metric] - mu) / su
         raise IndexError(f"Athlete ID {athlete_id} not found in mean and standard deviation dataframes.")
 
+    """
+    function applies z-score normalisation grouped by athlete to each metric in the dataframe
+    """
     def z_score_normalization(self, df):
-        """
-        Applies z-score normalization grouped by athlete to each metric in the dataframe.
-        """
         mean_df, std_df = self.getMeanStd(df)
         for metric in self.base_metrics:
             df[metric] = df.apply(lambda row: self.normalize_athlete(row, metric, mean_df, std_df), axis=1)
         return df
     
+    """
+    function applies min-max normalisation to each metric in the dataframe - column by column
+    """
     def min_max_normalization(self, df):
-        """
-        Applies Min-Max normalization to each metric in the dataframe.
-        """
         for metric in self.base_metrics:
             df[metric] = self.min_max_scaler.fit_transform(df[metric].values.reshape(-1, 1)).flatten()
         return df.reset_index(drop=True)
     
+    """
+    function normalises the dataset using both z-score normalisation athlete by athlete and then and Min-Max normalisation column by column
+    """
     def normalise(self, dataset):
-        """
-        Normalizes the dataset using both z-score normalisation athlete by athlete and then and Min-Max normalisation column by column.
-        """
         long = self.long_form(dataset)
         long = self.z_score_normalization(long)
         long = self.min_max_normalization(long)
         return self.wide_form(long, 7)
     
+    """
+    function converts the dataset to long format required for normalising.
+    """
     def long_form(self, df):
-        """
-        Converts the dataset to long format required for normalising.
-        """
         df_long = pd.wide_to_long(df, stubnames=self.base_metrics, i=self.fixed_columns, j='Offset', sep='.')
         df_long.reset_index(inplace=True)
         df_long[self.identifiers[1]] = df_long[self.identifiers[1]] - (self.WINDOW_DAYS - df_long['Offset'])
@@ -109,10 +92,10 @@ class RunningDatasetSurrogate:
         df_long.drop_duplicates(subset=self.identifiers, keep='first', inplace=True)
         return df_long
     
+    """
+    function converts the dataset from long format to wide format after normalisation.
+    """
     def wide_form(self, df_long, days):
-        """
-        Converts the dataset from long format to wide format after normalisation.
-        """
         df_long['Date'] = df_long['Date'].astype(int)
         df_long['Athlete ID'] = df_long['Athlete ID'].astype(int)
         df_long['injury'] = df_long['injury'].astype(int)
@@ -133,11 +116,11 @@ class RunningDatasetSurrogate:
         df_rolled = df_rolled.astype(dict(zip(df_rolled.columns, self.data_types_metrics * days + self.data_types_fixed_columns)))
         return df_rolled
     
+    """
+    function fills in missing dates for each athlete to ensure continuity in the data set - needed if the athlete 
+    has no recorded data for a specific date.
+    """
     def fill_missing_dates(self, group):
-        """
-        Fills in missing dates for each athlete to ensure continuity in the data set.
-        Needed if the athlete has not recorded data for a specific date.
-        """
         min_date = group[self.identifiers[1]].min()
         max_date = group[self.identifiers[1]].max()
         int_range = range(min_date, max_date + 1)
@@ -145,11 +128,13 @@ class RunningDatasetSurrogate:
         group[self.identifiers[0]] = group[self.identifiers[0]].ffill()
         return group
     
+    """
+    function to get predictions from the XGBoost models trained on the dataset as the ground truth for surrogate model training
+    """
     def get_xgboost_predictions(self, data):
         directory = '../../models'
         models = []
 
-        # Load all models from the specified directory
         for filename in os.listdir(directory):
             if filename.endswith('.pkl'):
                 filepath = os.path.join(directory, filename)
@@ -166,17 +151,16 @@ class RunningDatasetSurrogate:
             predictions = model.predict_proba(X)[:, 1].astype('float32')
             all_predictions.append(predictions)
 
-        # Stack predictions and calculate the mean
         all_predictions_array = np.stack(all_predictions, axis=0)
         mean_predictions = np.mean(all_predictions_array, axis=0)
         auc = roc_auc_score(y, mean_predictions)
         return mean_predictions
     
+    """
+    function converts data from 2D shape (no_samples, no_variables * no_time_steps), i.e., (N, 140) to
+    3D shape (no_samples, no_timesteps, no_variables), i.e., (N, 14, 10)
+    """
     def stack(self, df, days):
-        """
-        Converts data from 2D shape (no_samples, no_variables * no_time_steps), i.e., (N, 140) to 
-        3D shape (no_samples, no_timesteps, no_variables), i.e., (N, 14, 10) as required by the LSTM model.
-        """
         df.reset_index(drop=True, inplace=True)
         num_variables = 10 
         time_steps_per_variable = days
@@ -191,11 +175,10 @@ class RunningDatasetSurrogate:
                 
         return reshaped_data
 
-
+    """
+    function prepares the dataset for training by normalising and stacking it to 3D shape
+    """
     def preprocess(self):
-        """
-        Prepares the dataset for training by normalizing and splitting into train and test datasets.
-        """
         data = self.normalise(self.data)
         y = self.get_xgboost_predictions(data)
         X = data.drop(columns=self.fixed_columns)

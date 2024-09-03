@@ -15,19 +15,19 @@ def test_z_score_normalization():
     long = data.long_form(data.data)
     long.sort_values(by=data.identifiers, inplace=True)
     long.reset_index(drop=True, inplace=True)
-    long_normalized = data.z_score_normalization(long)  # Perform normalization
+    long_normalized = data.z_score_normalization(long)  
     long_normalized.sort_values(by=data.identifiers, inplace=True)
     long_normalized.reset_index(drop=True, inplace=True)
-    random_rows = random.sample(range(0, len(long)), 100)  # Sample from original data
+    random_rows = random.sample(range(0, len(long)), 100)  
     for row in random_rows:
         athlete_id = long.loc[row, data.identifiers[0]]
-        athlete_data = long[long[data.identifiers[0]] == athlete_id]  # Group by athlete ID
+        athlete_data = long[long[data.identifiers[0]] == athlete_id] 
         for metric in data.base_metrics:
             mean = athlete_data[metric].mean()
             std = athlete_data[metric].std()
-            expected_z_score = (long.loc[row, metric] - mean) / std if std != 0 else 0  # Calculate expected z-score
+            expected_z_score = (long.loc[row, metric] - mean) / std if std != 0 else 0 
             actual_z_score = long_normalized.loc[row, metric]
-            # We accept small differenes due to floating point precision differences to StandardScaler
+            
             assert abs(expected_z_score - actual_z_score) < 0.1, \
                 f"Z-score normalization failed for row {row}, metric {metric}, athlete id {athlete_id}. " \
                 f"Expected {expected_z_score}, got {actual_z_score}"
@@ -37,7 +37,7 @@ def test_min_max_normalization():
     long = data.long_form(data.data)
     long.sort_values(by=data.identifiers, inplace=True)
     long.reset_index(drop=True, inplace=True)
-    long_normalized = data.min_max_normalization(long)  # Perform normalization
+    long_normalized = data.min_max_normalization(long)  
     long_normalized.sort_values(by=data.identifiers, inplace=True)
     long_normalized.reset_index(drop=True, inplace=True)
     random_rows = random.sample(range(0, len(long)), 10000)

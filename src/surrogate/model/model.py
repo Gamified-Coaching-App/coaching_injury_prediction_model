@@ -10,38 +10,14 @@ import json
 
 NUM_EPOCHS = 1000
 
-class PositionalEncoding(Layer):
-    def __init__(self, max_len, d_model):
-        super(PositionalEncoding, self).__init__()
-        self.positional_encoding = self.get_positional_encoding(max_len, d_model)
-
-    def get_positional_encoding(self, max_len, d_model):
-        positions = tf.range(start=0, limit=max_len, delta=1, dtype=tf.float32)
-        angle_rates = 1 / tf.pow(10000, (2 * (tf.cast(tf.range(d_model), tf.float32) // 2)) / tf.cast(d_model, tf.float32))
-        angle_rads = positions[:, tf.newaxis] * angle_rates[tf.newaxis, :]
-
-        # Apply the sine to even indices in the array; 2i
-        angle_rads = tf.concat([tf.sin(angle_rads[:, 0::2]), tf.cos(angle_rads[:, 1::2])], axis=-1)
-
-        pos_encoding = angle_rads[tf.newaxis, ...]
-
-        return tf.cast(pos_encoding, tf.float32)
-
-    def call(self, inputs):
-        # Add the positional encoding to the inputs
-        return inputs + self.positional_encoding[:, :tf.shape(inputs)[1], :]
-
+"""
+Model class for building and training a neural network model based on a given configuration.
+"""
 class Model(tf.Module):
     """
-    This class builds a neural network model based on a given JSON configuration.
+    __init__  initializes the model based on the given configuration.
     """
     def __init__(self, architecture, optimiser_params):
-        """
-        Initializes the model based on the given configuration.
-
-        Parameters:
-        - config: Configuration dictionary for the model, containing layer definitions and optimizer settings.
-        """
         super(Model, self).__init__()
         self.model = self.create_model(architecture)
     
@@ -65,17 +41,10 @@ class Model(tf.Module):
 
         self.model.compile(optimizer=self.optimizer, loss='mse')
 
-
+    """
+    function creates the neural network model based on the given configuration @config
+    """
     def create_model(self, config):
-        """
-        Creates the neural network model based on the given configuration.
-
-        Args:
-        config (dict): Configuration dictionary for the model.
-
-        Returns:
-        model (tf.keras.Sequential): Compiled neural network model.
-        """
         model = models.Sequential()
         model.add(layers.Input(shape=(7, 10), name='original_input'))
 
@@ -160,9 +129,6 @@ class Model(tf.Module):
             elif layer_type == 'flatten':
                 model.add(layers.Flatten())
             
-            elif layer_type == 'positional_encoding':
-                model.add(PositionalEncoding(max_len=7, d_model=10))
-            
             elif layer_type == 'transformer_encoder':
                 params = {
                     'num_heads': layer_config['num_heads'],
@@ -190,8 +156,10 @@ class Model(tf.Module):
                 raise ValueError(f'Invalid layer type: {layer_type}')
 
         return model
-    
 
+"""
+function trains the model based on the given configuration and returns the trained model and the training/validation losses
+"""
 def train(X_train, Y_train, X_val, Y_val, architecture, optimiser_params, mode):
     model = Model(architecture=architecture, optimiser_params=optimiser_params)
     train_dataset = tf.data.Dataset.from_tensor_slices((X_train, Y_train)).batch(optimiser_params['batch_size'])
@@ -200,7 +168,7 @@ def train(X_train, Y_train, X_val, Y_val, architecture, optimiser_params, mode):
 
     early_stopping = EarlyStopping(
         monitor='val_loss',
-        patience=300,  # Stop training after 100 epochs with no improvement
+        patience=300,  
         restore_best_weights=False,
         verbose=0,
         min_delta=0.0000001
@@ -240,24 +208,27 @@ def train(X_train, Y_train, X_val, Y_val, architecture, optimiser_params, mode):
 
     return model, min_val_loss, train_losses, val_losses, num_epochs
 
+"""
+function evaluates the model based on the given test data and returns the test loss
+"""
 def evaluate(model, X_test, Y_test):
     test_loss = model.model.evaluate(X_test, Y_test, verbose=0)
     return test_loss
 
+"""
+function performs 5-fold cross-validation based on the given data and configuration and returns the report incl. cross valdiation data
+"""
 def cross_validate(Y, X, architecture, optimiser_params, report, n_splits=5):
 
     kf = KFold(n_splits=n_splits, shuffle=True)
     val_losses = []
    
     for train_index, val_index in kf.split(Y):
-        #X_train, X_val, Y_train, Y_val = train_test_split(X, Y, test_size=0.2)
         Y_train= Y[train_index]
         Y_val = Y[val_index]
         X_train= X[train_index]
         X_val= X[val_index]
 
-        
-        #Train the model and get the minimum validation loss for this fold
         _, min_val_loss, _, _, num_epochs = train(
             X_train=tf.convert_to_tensor(X_train), 
             Y_train=tf.convert_to_tensor(Y_train), 
@@ -271,7 +242,6 @@ def cross_validate(Y, X, architecture, optimiser_params, report, n_splits=5):
         
         val_losses.append(min_val_loss)
         
-    # Compute the average validation loss across all folds
     average_val_loss = np.mean(val_losses)
     std_val_loss = np.std(val_losses)
 
@@ -285,6 +255,9 @@ def cross_validate(Y, X, architecture, optimiser_params, report, n_splits=5):
     }       
     return report
 
+"""
+function performs the final training based on the given data and configuration, tests the model ans returns the report incl. train, val and test losses
+"""
 def final_training(X_train, Y_train, X_val, Y_val, X_test, Y_test, architecture, optimiser_params, report):
     model, min_val_loss, train_losses, val_losses, num_epochs = train(
         X_train=tf.convert_to_tensor(X_train), 
@@ -296,7 +269,6 @@ def final_training(X_train, Y_train, X_val, Y_val, X_test, Y_test, architecture,
         mode='final_training'
     )
     
-    # Load the best weights saved during training
     model.model.load_weights('best_weights.weights.h5')
     model.model.export('../surrogate_model/final')
 
@@ -304,11 +276,9 @@ def final_training(X_train, Y_train, X_val, Y_val, X_test, Y_test, architecture,
     print(f'Test loss: {test_loss}')
     predictions = model.model.predict(X_test)
 
-    # Convert predictions and ground truth to lists for JSON serialization
     predictions_list = predictions.tolist()
     ground_truth_list = Y_test.tolist()
 
-    # Save predictions and ground truth to a JSON file
     results = {
         'predictions': predictions_list,
         'ground_truth': ground_truth_list

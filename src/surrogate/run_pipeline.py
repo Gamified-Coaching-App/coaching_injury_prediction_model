@@ -10,6 +10,9 @@ import itertools
 from RunningDatasetSurrogate import RunningDatasetSurrogate
 from sklearn.model_selection import KFold
 
+"""
+helper function to configure the GPU
+"""
 
 def configure_gpu(device_to_use):
     if device_to_use == 'CPU':
@@ -26,16 +29,18 @@ def configure_gpu(device_to_use):
         else: 
             print("No GPUs available.")
 
-
+"""
+function to run the pipeline: preprocessing, and model training based on @mode: cross-validation or final training. Then saving of report
+"""
 def run(mode):
     dataset = RunningDatasetSurrogate()
     X, Y = dataset.preprocess()
-    # Load and preprocess data
+
     configure_gpu(device_to_use='CPU')
     
     report = {}
     timestamp = datetime.now().strftime("%m%d%H%M")
-    tf.config.set_visible_devices([], 'GPU')  # Set GPU visibility
+    tf.config.set_visible_devices([], 'GPU')  
 
     if mode == 'cross_validation_fine':
         print("Cross Validation Fine started")
@@ -60,7 +65,6 @@ def run(mode):
             json.dump(report, json_file, indent=2)
 
     elif mode == 'final_training':
-        # Perform the split: 15% test, 15% val, 70% train
         X_train_val, X_test, Y_train_val, Y_test = train_test_split(X, Y, test_size=0.15)
         X_train, X_val, Y_train, Y_val = train_test_split(X_train_val, Y_train_val, test_size=0.15/0.85)
         

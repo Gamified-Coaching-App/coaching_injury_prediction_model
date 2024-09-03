@@ -1,4 +1,6 @@
- ## Possible models: LSTM or Dense: Currently Dense hat best performace: 0.0031 (64, 32, 16) vs. 0.0035 with lstm
+"""
+configurations for cross validation and final training
+"""
 
 cross_val_architectures = [
 #    [
@@ -41,7 +43,7 @@ cross_val_architectures = [
     #     {'type': 'dense', 'units': 1, 'activation': 'sigmoid'}
     # ],
     # [
-    #     {'type': 'reshape', 'target_shape': (7, 10, 1)},  # Assuming the output from Dense layer has 64 units
+    #     {'type': 'reshape', 'target_shape': (7, 10, 1)},  
     #     {'type': 'conv2d', 'filters': 32, 'kernel_size': (5, 5), 'activation': 'relu', 'padding': 'same'},
     #     {'type': 'max_pooling2d', 'pool_size': (2, 2)},
     #     {'type': 'batch_normalization'},
@@ -90,7 +92,7 @@ cross_val_optimiser_params = [
     },
     {
         'optimiser': 'adam',
-        'learning_rate': 0.1,  # Ignored when scheduler is applied
+        'learning_rate': 0.1,  
         'weight_decay': 0.0,
         'scheduler': 'cosine_decay',
         'scheduler_params': {
@@ -104,7 +106,7 @@ cross_val_optimiser_params = [
     },
     {
         'optimiser': 'adam',
-        'learning_rate': 0.1,  # Ignored when scheduler is applied
+        'learning_rate': 0.1,  
         'weight_decay': 0.00001,
         'scheduler': 'cosine_decay',
         'scheduler_params': {
@@ -118,7 +120,7 @@ cross_val_optimiser_params = [
     },
     {
         'optimiser': 'adam',
-        'learning_rate': 0.1,  # Ignored when scheduler is applied
+        'learning_rate': 0.1,  
         'weight_decay': 0.0001,
         'scheduler': 'cosine_decay',
         'scheduler_params': {
@@ -132,7 +134,7 @@ cross_val_optimiser_params = [
     },
     {
         'optimiser': 'adam',
-        'learning_rate': 0.1,  # Ignored when scheduler is applied
+        'learning_rate': 0.1,  
         'weight_decay': 0.0,
         'scheduler': 'cosine_decay',
         'scheduler_params': {
@@ -146,7 +148,7 @@ cross_val_optimiser_params = [
     },
     {
         'optimiser': 'adam',
-        'learning_rate': 0.1,  # Ignored when scheduler is applied
+        'learning_rate': 0.1,  
         'weight_decay': 0.00001,
         'scheduler': 'cosine_decay',
         'scheduler_params': {
@@ -160,7 +162,7 @@ cross_val_optimiser_params = [
     },
     {
         'optimiser': 'adam',
-        'learning_rate': 0.1,  # Ignored when scheduler is applied
+        'learning_rate': 0.1, 
         'weight_decay': 0.0,
         'scheduler': 'cosine_decay',
         'scheduler_params': {
@@ -174,7 +176,7 @@ cross_val_optimiser_params = [
     },
     {
         'optimiser': 'adam',
-        'learning_rate': 0.1,  # Ignored when scheduler is applied
+        'learning_rate': 0.1,  
         'weight_decay': 0.00001,
         'scheduler': 'cosine_decay',
         'scheduler_params': {
@@ -188,7 +190,7 @@ cross_val_optimiser_params = [
     },
     {
         'optimiser': 'adam',
-        'learning_rate': 0.1,  # Ignored when scheduler is applied
+        'learning_rate': 0.1,  
         'weight_decay': 0.0,
         'scheduler': 'cosine_decay',
         'scheduler_params': {
@@ -202,7 +204,7 @@ cross_val_optimiser_params = [
     },
     {
         'optimiser': 'adam',
-        'learning_rate': 0.1,  # Ignored when scheduler is applied
+        'learning_rate': 0.1, 
         'weight_decay': 0.0001,
         'scheduler': 'cosine_decay',
         'scheduler_params': {
@@ -216,7 +218,7 @@ cross_val_optimiser_params = [
     },
     {
         'optimiser': 'adam',
-        'learning_rate': 0.1,  # Ignored when scheduler is applied
+        'learning_rate': 0.1, 
         'weight_decay': 0.0,
         'scheduler': 'cosine_decay',
         'scheduler_params': {

@@ -1,3 +1,8 @@
+"""
+code is based on Lovdal, Sofie; den Hartigh, Ruud; Azzopardi, George, 2021, "Replication Data for: Injury Prediction In Competitive Runners With Machine Learning",
+Link for original code: https://dataverse.nl/dataset.xhtml?persistentId=doi:10.34894/UWU9PV
+"""
+
 import os
 import pandas as pd
 import xgboost as xgb
@@ -44,8 +49,8 @@ def getStats(y_test, y_pred, y_prob, in_thresh):
     return {"auc": auc, "PR": PR, "RE": RE, "SP": SP, "F1": F1, "acc": acc, "mcc": mcc, "cm": cm}
 
 def getBalancedSubset(train, samplesPerClass):
-    healthySet = pd.DataFrame()  # Initialize as empty DataFrame
-    unhealthySet = pd.DataFrame()  # Initialize as empty DataFrame
+    healthySet = pd.DataFrame()  
+    unhealthySet = pd.DataFrame()  
 
     stats = pd.DataFrame(train[['Athlete ID', 'injury']].groupby(['Athlete ID', 'injury']).size().reset_index(name='counts'))
     stats = pd.DataFrame(stats[['Athlete ID']].groupby(['Athlete ID']).size().reset_index(name='counts'))
@@ -135,9 +140,6 @@ def main():
                 aggFeatureRanking = featureRanking
             else:
                 aggFeatureRanking += featureRanking
-
-    # aggFeatureRanking /= params["nExp"]
-    # print("Aggregated Feature Importances:", aggFeatureRanking.mean(axis=1))
 
 if __name__ == "__main__":
     main()
